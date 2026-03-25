@@ -7,14 +7,15 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define COLUMN_USERNAME_SIZE 32
-#define COLUMN_EMAIL_SIZE 255
-#define size_of_attribute(Struct, Attribute) sizeof(((Struct*)0)->Attribute)
+#define COLUMN_USERNAME_SIZE 32     //rozmiar w bajtach username
+#define COLUMN_EMAIL_SIZE 255       //rozmiar w bajtach
+#define size_of_attribute(Struct, Attribute) sizeof(((Struct*)0)->Attribute)        //rozmiar atrybutu, podajemy strukture, potem jego atrybut, 
 
 typedef struct{
-    uint32_t id;
-    char username[COLUMN_USERNAME_SIZE + 1];
-    char email[COLUMN_EMAIL_SIZE +1];
+    //definicja struktury wiersza, trzyma id, username, emial
+    uint32_t id;    // id w typie uint32_t || u-unsigned (nie przyjmuje ujemnych), t_32 
+    char username[COLUMN_USERNAME_SIZE + 1];    //tablica na column_username 
+    char email[COLUMN_EMAIL_SIZE +1];           // +1 ponieważ C zapisuje napisy dodajac do ich konca \0, wkazujac koniec tekstu
 } Row;
 
 const uint32_t ID_SIZE = size_of_attribute(Row, id);
@@ -31,28 +32,36 @@ const uint32_t ROWS_PER_PAGE = PAGE_SIZE / ROW_SIZE;    //wiersze na strony = 40
 const uint32_t TABLE_MAX_ROWS = ROWS_PER_PAGE * TABLE_MAX_PAGES;
 
 typedef struct{
-    int file_descriptor;
-    uint32_t file_length;
-    void* pages[TABLE_MAX_PAGES];
+    //(Zarządca I/O i Cache)
+
+    int file_descriptor;    //uchwyt, funkcja otiwera plik funkja open() a ta zwraca liczbe calkowita, i nią bedziemy sie identyfikowac potem
+    uint32_t file_length;   //dlugosc pliku w bajtach, pager nie wie co to tabele, wiersze ani jakie dane tam mamy, 
+    void* pages[TABLE_MAX_PAGES];   //void* zwraca adres, mamy tu tablice adresow(100). Jest ta pamiec podreczna stron (Page cache)
 } Pager;
 
 typedef struct{
-    uint32_t num_rows;
-    Pager* pager;
+    //tabela nie posiada wlasnych danych, za to odpowiada pager, 
+
+    uint32_t num_rows;  //liczba wierszy jakie przetrzymuje tablica
+    Pager* pager;       //wskaznik do pagera
 } Table;
 
 typedef struct {
-  char* buffer;
-  size_t buffer_length;
-  ssize_t input_length;
+    //InputBuffer bedie korzystal z funkcji getline, wiec musi miec buffer, wielkosc buffer by nie przekroczyc rozmiaru, oraz sprawdzic ile wpisal uztyykownik
+
+    char* buffer;         //wskazujemy poczatek bloku pamieci w RAM, nie tablica bo nie wiemy co wpisze uzytkownik
+    size_t buffer_length; //wielkosc naszego buffer
+    ssize_t input_length; //ile znakow wpisal uzytkownik ssize bo moze byc ujemna ilosc(blad)
 } InputBuffer;
 
 typedef enum {
     STATEMENT_INSERT,
-     STATEMENT_SELECT
+    STATEMENT_SELECT
 } StatementType;
 
 typedef struct{
+    //Statement(statemant, row) -> albo insert albo select, dane ktore wkladamy
+
     StatementType type;
     Row row_to_insert;
 } Statement;
@@ -76,6 +85,8 @@ typedef enum{
 } MetaCommandResult;
 
 Pager* pager_open(const char* filename){
+    //funkcja otwiera plik -> sprawdza dlugosc pliku -> inicializuje pager -> ustawia kazda strone na NULL
+
     int fd = open(filename,
                 O_RDWR |      // Read/Write mode
                     O_CREAT,  // Create file if it does not exist
@@ -91,13 +102,18 @@ Pager* pager_open(const char* filename){
     pager->file_length = file_length;
 
     for (uint32_t i=0; i<TABLE_MAX_PAGES; i++){
-        pager->pages[i] = NULL;
+        pager->pages[i] = NULL;                 //Robimy tak bo po zainicjowaniu pamieci przez malloc pages[i] są pełne smieci, czyscimy pamiec
     }
 
     return pager;
 }
 
 Table* db_open(const char* filename){
+    // Warstwa abstrakcji dla interfejsu uzytkownika.
+    // 1. Zleca Pagerowi fizyczne otwarcie/stworzenie pliku na dysku.
+    // 2. Na podstawie wielkosci pliku w bajtach wylicza, ile wierszy mielismy juz zapisanych.
+    // 3. Alokuje pamiec na glowna strukture Table, zamyka w niej Pagera i zwraca gotowy silnik bazy.
+
     Pager* pager = pager_open(filename);
     uint32_t num_rows = pager->file_length/ROW_SIZE;
 
@@ -109,6 +125,8 @@ Table* db_open(const char* filename){
 
 
 PrepareResult prepare_insert(InputBuffer* input_buffer, Statement* statement){
+    //konwertujemy caly string na poszczegole typy (id, username, email)
+
     statement->type = STATEMENT_INSERT;
 
     char* keyword = strtok(input_buffer->buffer, " ");
@@ -132,7 +150,7 @@ PrepareResult prepare_insert(InputBuffer* input_buffer, Statement* statement){
     }
 
     statement->row_to_insert.id = id;
-    strcpy(statement->row_to_insert.username, username);
+    strcpy(statement->row_to_insert.username, username);            //uzywamy strcpy bo nie da sie przypisac stringa w C, 
     strcpy(statement->row_to_insert.email, email);
 
     return PREPARE_SUCCESS;
