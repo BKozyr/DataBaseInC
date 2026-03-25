@@ -1,8 +1,12 @@
 import subprocess
+import os
 
 def run_script(commands):
+    if os.path.exists('test.db'):
+        os.remove('test.db')
+
     process = subprocess.Popen(
-        ['./main'],
+        ['./main', 'test.db'],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         text=True
@@ -79,3 +83,28 @@ def test_prints_an_error_message_if_id_is_negative():
         "db > Executed.",
         "db > "
     ]
+
+def test_keeps_data_after_closing_connection():
+    result1 = run_script([
+        "insert 1 user1 person1@example.com",
+        ".exit",
+    ])    
+    expected = [
+    "db > Executed.",
+    "db > ",
+    ]
+
+    assert expected == result1
+
+    result2 = run_script([
+        "select",
+        ".exit",
+    ])
+
+    expected2 = [
+        "db > (1, user1, person1@example.com)",
+        "Executed.",
+        "db > " 
+    ]
+
+    assert expected2 == result2
