@@ -2,8 +2,6 @@
 
 Prosta relacyjna baza danych napisana całkowicie od zera w języku C. Projekt jest implementacją silnika bazy danych inspirowanego architekturą SQLite. Pozwala na uruchomienie interaktywnego środowiska (REPL), wprowadzanie i odczytywanie wierszy oraz trwały zapis danych na dysku z wykorzystaniem struktury B-Drzewa (B-Tree).
 
-Projekt powstał na bazie fantastycznego tutoriala: [Let's Build a Simple Database](https://cstack.github.io/db_tutorial/) autorstwa cstack.
-
 ## 🚀 Główne funkcjonalności
 
 <img width="899" height="989" alt="image" src="https://github.com/user-attachments/assets/fd636ede-520c-45eb-a4e9-42ac0798fb28" />
