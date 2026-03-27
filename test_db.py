@@ -139,10 +139,29 @@ def test_allows_printing_out_the_structure_of_a_one_node_btree():
         "db > Executed.",
         "db > Tree:",
         "Leaf (size: 3)",
-        "  - 0 : 3",
-        "  - 1 : 1",
-        "  - 2 : 2",
+        "  - 0 : 1",
+        "  - 1 : 2",
+        "  - 2 : 3",
         "db > "
         ]
     
+    assert expected == result
+
+
+def test_prints_an_error_message_if_there_is_a_duplicate_id():
+    script = [
+      "insert 1 user1 person1@example.com",
+      "insert 1 user1 person1@example.com",
+      "select",
+      ".exit",
+    ]
+    result = run_script(script)
+    expected = [
+      "db > Executed.",
+      "db > Error: Duplicate key.",
+      "db > (1, user1, person1@example.com)",
+      "Executed.",
+      "db > ",
+    ]
+
     assert expected == result
