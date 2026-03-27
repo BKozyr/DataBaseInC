@@ -1,8 +1,8 @@
 import subprocess
 import os
 
-def run_script(commands):
-    if os.path.exists('test.db'):
+def run_script(commands, clear_db = True):
+    if os.path.exists('test.db') and clear_db:
         os.remove('test.db')
 
     process = subprocess.Popen(
@@ -99,7 +99,7 @@ def test_keeps_data_after_closing_connection():
     result2 = run_script([
         "select",
         ".exit",
-    ])
+    ], False)
 
     expected2 = [
         "db > (1, user1, person1@example.com)",
@@ -130,15 +130,15 @@ def test_prints_constants():
 
 
 def test_allows_printing_out_the_structure_of_a_one_node_btree():
-    script = ["insert #{i} user#{i} person#{i}@example.com" for i in [3,1,2]]
-
+    script = [f"insert {i} user{i} person{i}@example.com" for i in [3,1,2]]
+    script.extend([".btree", ".exit"])
     result = run_script(script)
     expected = [
         "db > Executed.",
         "db > Executed.",
         "db > Executed.",
         "db > Tree:",
-        "leaf (size 3)",
+        "Leaf (size: 3)",
         "  - 0 : 3",
         "  - 1 : 1",
         "  - 2 : 2",
