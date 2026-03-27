@@ -77,7 +77,7 @@ uint32_t* leaf_node_num_cells(void* node){
     return node + LEAF_NODE_NUM_CELLS_OFFSET;
 }
 
-void* leaf_node_cell(void* node, uint32_t* cell_num){
+void* leaf_node_cell(void* node, uint32_t cell_num){
     return node + LEAF_NODE_HEADER_SIZE + cell_num * LEAF_NODE_CELL_SIZE;
 }
 
@@ -124,6 +124,37 @@ typedef struct{
     bool end_of_table;
 } Cursor;
 
+void* get_page(Pager* pager, uint32_t page_num){
+    if(page_num > PAGE_SIZE){
+        printf("Tried to fetch page number out of bounds. %d > %d\n", page_num, TABLE_MAX_PAGES);
+        exit(EXIT_FAILURE);
+    }
+    if (pager->pages[page_num] == NULL){
+        void* page = malloc(PAGE_SIZE);
+        uint32_t num_pages = pager->file_length / PAGE_SIZE;
+
+        if (pager->file_length % PAGE_SIZE){
+            num_pages+=1;
+        }
+
+        if (page_num <= num_pages){
+            lseek(pager->file_descriptor, page_num * PAGE_SIZE, SEEK_SET);
+            ssize_t bytes_read = read(pager->file_descriptor, page, PAGE_SIZE);
+            if (bytes_read == -1){
+                printf("Error reading file: %d\n", errno);
+                exit(EXIT_FAILURE);
+            }
+        }
+        pager->pages[page_num] = page;
+
+        if (page_num >= pager->num_pages){
+            pager->num_pages = page_num +1;
+        }
+    }
+
+    return pager->pages[page_num];
+}
+
 Cursor* table_start(Table* table){
     //funkcja jest wywoływana jak uzytkownik wpisze select,
     // nasz kursor ustaiwa sie na pierwszym rekordzie.
@@ -136,7 +167,7 @@ Cursor* table_start(Table* table){
     void* root_node = get_page(table->pager, table->root_page_num);
 
     //sprawdzamy czy baza nie jest pusta
-    cursor->end_of_table = (table->cell_rows == 13);
+//    cursor->end_of_table = (table->cell_rows == 13);
     uint32_t num_cells = *leaf_node_num_cells(root_node);
     cursor->end_of_table = (num_cells == 0);
 
@@ -250,13 +281,25 @@ Table* db_open(const char* filename){
 void print_leaf_node(void* node){
     uint32_t num_cells = *leaf_node_num_cells(node);
     printf("Leaf (size: %d)\n", num_cells);
-    for (uint32_t i =0; o< num_cells; i++){
+    for (uint32_t i =0; i< num_cells; i++){
         uint32_t key = *leaf_node_key(node, i);
         printf("  - %d : %d\n", i, key);
     } 
 }
 
-void leaf_node_insert(Cursor* cursor,uint32_t key, Row value){
+void serialize_row(Row* source, void* destination){
+    memcpy(destination + ID_OFFSET, &(source->id), ID_SIZE);
+    strncpy(destination + USERNAME_OFFSET, source->username, USERNAME_SIZE);
+    strncpy(destination + EMAIL_OFFSET, source->email, EMAIL_SIZE);
+}
+
+void deserialize_row(void* source, Row* destination){
+    memcpy(&(destination->id), source + ID_OFFSET, ID_SIZE);
+    memcpy(&(destination->username), source + USERNAME_OFFSET, USERNAME_SIZE);
+    memcpy(&(destination->email), source + EMAIL_OFFSET, EMAIL_SIZE);
+}
+
+void leaf_node_insert(Cursor* cursor,uint32_t key, Row* value){
     void* node = get_page(cursor->table->pager, cursor->page_num);  //adres do strony gdzie bedziemy wpisywac nowy wiersz
 
     uint32_t num_cells = *leaf_node_num_cells(node);    //aktualna liczba komorek(wierszy) na stronie
@@ -328,50 +371,6 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
-void serialize_row(Row* source, void* destination){
-    memcpy(destination + ID_OFFSET, &(source->id), ID_SIZE);
-    strncpy(destination + USERNAME_OFFSET, source->username, USERNAME_SIZE);
-    strncpy(destination + EMAIL_OFFSET, source->email, EMAIL_SIZE);
-}
-
-void deserialize_row(void* source, Row* destination){
-    memcpy(&(destination->id), source + ID_OFFSET, ID_SIZE);
-    memcpy(&(destination->username), source + USERNAME_OFFSET, USERNAME_SIZE);
-    memcpy(&(destination->email), source + EMAIL_OFFSET, EMAIL_SIZE);
-}
-
-
-void* get_page(Pager* pager, uint32_t page_num){
-    if(page_num > PAGE_SIZE){
-        printf("Tried to fetch page number out of bounds. %d > %d\n", page_num, TABLE_MAX_PAGES);
-        exit(EXIT_FAILURE);
-    }
-    if (pager->pages[page_num] == NULL){
-        void* page = malloc(PAGE_SIZE);
-        uint32_t num_pages = pager->file_length / PAGE_SIZE;
-
-        if (pager->file_length % PAGE_SIZE){
-            num_pages+=1;
-        }
-
-        if (page_num <= num_pages){
-            lseek(pager->file_descriptor, page_num * PAGE_SIZE, SEEK_SET);
-            ssize_t bytes_read = read(pager->file_descriptor, page, PAGE_SIZE);
-            if (bytes_read == -1){
-                printf("Error reading file: %d\n", errno);
-                exit(EXIT_FAILURE);
-            }
-        }
-        pager->pages[page_num] = page;
-
-        if (page_num >= pager->num_pages){
-            pager->num_pages = page_num +1;
-        }
-    }
-
-    return pager->pages[page_num];
-}
-
 void* cursor_value(Cursor* cursor){
     uint32_t page_num = cursor->page_num;
     void* page = get_page(cursor->table->pager, page_num);
@@ -390,7 +389,7 @@ void cursor_advance(Cursor* cursor){
 
 
 
-void* pager_flush(Pager* pager, uint32_t page_num){
+void pager_flush(Pager* pager, uint32_t page_num){
     // funkcja zapisuje dane do bazy danych, strona po stronie (petla w db_close)
 
     if (pager->pages[page_num] == NULL){
@@ -489,7 +488,7 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer, Table* table){
         db_close(table);
         exit(EXIT_SUCCESS);
     }else if(strcmp(input_buffer->buffer, ".constants") == 0){
-        priintf("Constants:\n");
+        printf("Constants:\n");
         print_constants();
         return META_COMMAND_SUCCESS;
     }   
