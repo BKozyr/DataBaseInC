@@ -6,6 +6,9 @@ Projekt powstał na bazie fantastycznego tutoriala: [Let's Build a Simple Databa
 
 ## 🚀 Główne funkcjonalności
 
+<img width="899" height="989" alt="image" src="https://github.com/user-attachments/assets/fd636ede-520c-45eb-a4e9-42ac0798fb28" />
+
+
 * **REPL (Read-Execute-Print-Loop):** Interaktywny interfejs wiersza poleceń do komunikacji z bazą.
 * **Kompilator i Wirtualna Maszyna:** Przetwarzanie wejścia tekstowego na instrukcje rozumiane przez silnik.
 * **Struktura B-Drzewa (B-Tree):** Wiersze są przechowywane i sortowane w węzłach drzewa (Leaf Nodes i Internal Nodes) z wykorzystaniem algorytmu wyszukiwania binarnego (Binary Search).
