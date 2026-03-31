@@ -35,7 +35,7 @@ def test_prints_error_message_when_table_is_full():
     input=[f"insert {i} user{i} person{i}@example.com" for i in range(0,1401)]
     input.append('.exit')
     result = run_script(input)
-    expected = 'db > Error: Table full.'
+    expected = 'db > Need to implement searching an internal node'
     assert expected == result[-2]
 
 def test_allows_inserting_strings_that_are_the_maximum_length():
@@ -138,10 +138,10 @@ def test_allows_printing_out_the_structure_of_a_one_node_btree():
         "db > Executed.",
         "db > Executed.",
         "db > Tree:",
-        "Leaf (size: 3)",
-        "  - 0 : 1",
-        "  - 1 : 2",
-        "  - 2 : 3",
+        "- leaf (size 3)",
+        "  - 1",
+        "  - 2",
+        "  - 3",
         "db > "
         ]
     
@@ -165,3 +165,51 @@ def test_prints_an_error_message_if_there_is_a_duplicate_id():
     ]
 
     assert expected == result
+
+
+def test_allows_printing_out_the_structure_of_a_3_leaf_node_btree():
+    script = [f"insert {i} user{i} person{i}@example.com" for i in range(1,15)]
+    script.append(".btree")
+    script.append("insert 15 user15 person15@example.com")
+    script.append(".exit")
+    result = run_script(script)
+
+    expected = [
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Executed.",
+        "db > Tree:",
+      "- internal (size 1)",
+      "  - leaf (size 7)",
+      "    - 1",
+      "    - 2",
+      "    - 3",
+      "    - 4",
+      "    - 5",
+      "    - 6",
+      "    - 7",
+      "  - key 7",
+      "  - leaf (size 7)",
+      "    - 8",
+      "    - 9",
+      "    - 10",
+      "    - 11",
+      "    - 12",
+      "    - 13",
+      "    - 14",
+      "db > Need to implement searching an internal node",
+      ""
+    ]
+
+    assert result == expected
