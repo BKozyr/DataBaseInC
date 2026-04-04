@@ -35,8 +35,11 @@ def test_prints_error_message_when_table_is_full():
     input=[f"insert {i} user{i} person{i}@example.com" for i in range(0,1401)]
     input.append('.exit')
     result = run_script(input)
-    expected = 'db > Need to implement searching an internal node'
-    assert expected == result[-2]
+    expected = [
+            "db > Need to implement updating parent after split",
+            ""
+        ]
+    assert expected == result[-2:]
 
 def test_allows_inserting_strings_that_are_the_maximum_length():
     long_username = "a"*32
@@ -208,8 +211,8 @@ def test_allows_printing_out_the_structure_of_a_3_leaf_node_btree():
       "    - 12",
       "    - 13",
       "    - 14",
-      "db > Need to implement searching an internal node",
-      ""
+      "db > Executed.",
+      "db > "
     ]
 
     assert result == expected
