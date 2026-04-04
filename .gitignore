@@ -1,0 +1,13 @@
+# Skompilowane pliki wykonywalne (C)
+main
+main.exe
+
+# Pliki bazy danych
+*.db
+mydb
+test.db
+
+# Cache i pliki tymczasowe Pythona / Testów
+__pycache__/
+.pytest_cache/
+.pytest_cache
